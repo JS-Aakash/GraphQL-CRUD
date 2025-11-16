@@ -21,7 +21,8 @@ graphql-crud/
 │   └── package.json      
 │
 ├── frontend/
-│   └── index.html       
+│   └── index.html
+│   └── script.js
 └── README.md           
 ```
 
