@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Full GraphQL CRUD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 font-sans">
+
+  <div class="max-w-5xl mx-auto p-6">
+    <h1 class="text-4xl font-bold text-center text-indigo-700 mb-8">GraphQL Full CRUD</h1>
+    <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">Add User</h2>
+      <form id="addUserForm" class="flex flex-wrap gap-3">
+        <input type="text" id="newName" placeholder="Name" required
+          class="flex-1 min-w-[150px] p-3 border rounded-lg" />
+        <input type="email" id="newEmail" placeholder="Email" required
+          class="flex-1 min-w-[150px] p-3 border rounded-lg" />
+        <input type="number" id="newAge" placeholder="Age" class="w-24 p-3 border rounded-lg" />
+        <button type="submit" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700">Add User</button>
+      </form>
+    </div>
+
+    <div id="app"></div>
+  </div>
+
+  <script>
+    async function gql(query, vars = {}) {
+      const res = await fetch('http://localhost:4000/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: vars })
+      });
+      const json = await res.json();
+      if (json.errors) throw new Error(json.errors[0].message);
+      return json.data;
+    }
+
+    const app = document.getElementById('app');
+
+    async function load() {
+      app.innerHTML = '<p class="text-center text-gray-600 text-xl">Loading...</p>';
+      try {
+        const data = await gql(`
+          query {
+            users {
+              id name email age
+              posts { id title content }
+            }
+          }
+        `);
+        render(data.users);
+      } catch (e) {
+        app.innerHTML = `<p class="text-red-600 text-center">Error: ${e.message}</p>`;
+      }
+    }
+
+    function render(users) {
+      app.innerHTML = users.map(user => `
+        <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+          <!-- USER INFO -->
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="text-xl font-bold text-gray-800">${user.name}</h3>
+              <p class="text-gray-600">${user.email} ${user.age ? `• Age: ${user.age}` : ''}</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="editUser('${user.id}', '${user.name}', '${user.email}', ${user.age || 'null'})"
+                      class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Edit</button>
+              <button onclick="deleteUser('${user.id}')"
+                      class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete User</button>
+            </div>
+          </div>
+
+          <!-- ADD POST -->
+          <div class="bg-gray-50 p-4 rounded-lg mb-4">
+            <h4 class="font-semibold text-gray-700 mb-2">Add Post</h4>
+            <form onsubmit="addPost(event, '${user.id}')" class="flex gap-2">
+              <input type="text" placeholder="Title" required class="flex-1 p-2 border rounded" />
+              <input type="text" placeholder="Content" required class="flex-1 p-2 border rounded" />
+              <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Post</button>
+            </form>
+          </div>
+
+          <!-- POSTS -->
+          <div class="space-y-3">
+            ${user.posts.length ? user.posts.map(post => `
+              <div class="bg-blue-50 p-4 rounded-lg flex justify-between items-start">
+                <div class="flex-1">
+                  <h5 class="font-bold text-gray-800">${post.title}</h5>
+                  <p class="text-gray-700">${post.content}</p>
+                </div>
+                <div class="flex gap-1 ml-4">
+                  <button onclick="editPost('${post.id}', '${post.title}', '${post.content}')"
+                          class="bg-yellow-500 text-white text-xs px-3 py-1 rounded hover:bg-yellow-600">Edit</button>
+                  <button onclick="deletePost('${post.id}')"
+                          class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700">Del</button>
+                </div>
+              </div>
+            `).join('') : '<p class="text-gray-500 italic">No posts yet.</p>'}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.editUser = (id, name, email, age) => {
+      const n = prompt('New Name:', name);
+      const e = prompt('New Email:', email);
+      const a = prompt('New Age:', age);
+      if (n && e) {
+        gql(`mutation($id:ID!, $n:String, $e:String, $a:Int){
+          updateUser(id:$id, name:$n, email:$e, age:$a){id}
+        }`, { id, n, e, a: a ? +a : null }).then(load);
+      }
+    };
+
+    window.deleteUser = (id) => {
+      if (confirm('Delete user and all their posts?')) {
+        gql(`mutation { deleteUser(id: "${id}") }`).then(load);
+      }
+    };
+
+    window.addPost = async (e, authorId) => {
+      e.preventDefault();
+      const form = e.target;
+      const title = form[0].value;
+      const content = form[1].value;
+      await gql(`mutation($t:String!,$c:String!,$a:ID!){
+        createPost(title:$t, content:$c, authorId:$a){id}
+      }`, { t: title, c: content, a: authorId });
+      form.reset();
+      load();
+    };
+
+    window.editPost = (id, title, content) => {
+      const t = prompt('New Title:', title);
+      const c = prompt('New Content:', content);
+      if (t || c) {
+        gql(`mutation($id:ID!, $t:String, $c:String){
+          updatePost(id:$id, title:$t, content:$c){id}
+        }`, { id, t, c }).then(load);
+      }
+    };
+
+    window.deletePost = (id) => {
+      if (confirm('Delete post?')) {
+        gql(`mutation { deletePost(id: "${id}") }`).then(load);
+      }
+    };
+
+    document.getElementById('addUserForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('newName').value;
+      const email = document.getElementById('newEmail').value;
+      const age = document.getElementById('newAge').value;
+      await gql(`mutation($n:String!,$e:String!,$a:Int){
+        createUser(name:$n, email:$e, age:$a){id}
+      }`, { n: name, e: email, a: age ? +age : null });
+      e.target.reset();
+      load();
+    };
+
+    load();
+  </script>
+</body>
+
+</html>

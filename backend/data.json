@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Arjun Patel",
+      "email": "arjun@example.com",
+      "age": 28
+    },
+    {
+      "id": "2",
+      "name": "Priya Sharma",
+      "email": "priya@example.com",
+      "age": 24
+    },
+    {
+      "id": "3",
+      "name": "Rohan Kumar",
+      "email": "rohan@example.com",
+      "age": 32
+    }
+  ],
+  "posts": [
+    {
+      "id": "p1",
+      "title": "GraphQL is awesome",
+      "content": "Learning GraphQL",
+      "authorId": "1"
+    },
+    {
+      "id": "p2",
+      "title": "My first post",
+      "content": "Hello world",
+      "authorId": "2"
+    },
+    {
+      "id": "p3",
+      "title": "Mutations rock",
+      "content": "Created a user!",
+      "authorId": "1"
+    },
+    {
+      "id": "cdb125b4",
+      "title": "Hello Everyone",
+      "content": "Nothing much for me to say",
+      "authorId": "3"
+    }
+  ]
+}
