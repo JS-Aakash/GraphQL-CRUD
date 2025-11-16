@@ -1,7 +1,5 @@
-```markdown
-# GraphQL Full-Stack CRUD App
 
----
+# GraphQL Full-Stack CRUD App
 
 ## Overview
 
@@ -14,9 +12,8 @@ A **complete full-stack GraphQL CRUD application** with:
 ---
 
 ## Project Structure
-
 ```
-graphql-crud-fullstack/
+graphql-crud/
 │
 ├── backend/
 │   ├── server.js         
