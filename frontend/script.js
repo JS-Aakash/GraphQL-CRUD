@@ -1,13 +1,12 @@
-
 async function gql(query, variables = {}) {
   const res = await fetch('http://localhost:4000/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables })
-  })
-  const json = await res.json()
-  if (json.errors) throw new Error(json.errors[0].message)
-  return json.data
+  });
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message);
+  return json.data;
 }
 
 // DOM Elements
@@ -32,18 +31,18 @@ async function loadUsers() {
           }
         }
       }
-    `)
-    renderUsers(data.users)
+    `);
+    renderUsers(data.users);
   } catch (err) {
-    usersDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`
+    usersDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
   }
 }
 
 // Render users
 function renderUsers(users) {
   if (users.length === 0) {
-    usersDiv.innerHTML = '<p>No users yet.</p>'
-    return
+    usersDiv.innerHTML = '<p>No users yet.</p>';
+    return;
   }
 
   usersDiv.innerHTML = users.map(user => `
@@ -75,19 +74,19 @@ function escape(str) {
 window.deletePost = async (postId) => {
   if (!confirm('Delete this post?')) return
   try {
-    await gql(`mutation { deletePost(id: "${postId}") }`)
-    loadUsers()
+    await gql(`mutation { deletePost(id: "${postId}" ) }`);
+    loadUsers();
   } catch (err) {
-    alert('Delete failed: ' + err.message)
+    alert('Delete failed: ' + err.message);
   }
 }
 
 // Add user
 userForm.addEventListener('submit', async (e) => {
-  e.preventDefault()
-  const name = document.getElementById('name').value
-  const email = document.getElementById('email').value
-  const age = document.getElementById('age').value
+  e.preventDefault();
+  const name = document.getElementById('name').value;
+  const email = document.getElementById('email').value;
+  const age = document.getElementById('age').value;
 
   try {
     await gql(`
@@ -98,13 +97,79 @@ userForm.addEventListener('submit', async (e) => {
       n: name,
       e: email,
       a: age ? parseInt(age) : null
-    })
-    userForm.reset()
-    loadUsers()
+    });
+    userForm.reset();
+    loadUsers();
   } catch (err) {
-    alert('Error: ' + err.message)
+    alert('Error: ' + err.message);
   }
-})
+});
 
 // Initial load
-loadUsers()
+loadUsers();
+
+// Caching
+const cache = {
+  users: {},
+  posts: {}
+};
+
+// Load users from cache or fetch from server
+async function loadUsersFromCache() {
+  if (cache.users.users) return cache.users.users;
+  try {
+    const data = await gql(`
+      query {
+        users {
+          id
+          name
+          email
+          age
+          posts {
+            id
+            title
+            content
+          }
+        }
+      }
+    `);
+    cache.users = data;
+    return data.users;
+  } catch (err) {
+    console.error('Error fetching users:', err);
+  }
+}
+
+// Load posts from cache or fetch from server
+async function loadPostsFromCache() {
+  if (cache.posts.posts) return cache.posts.posts;
+  try {
+    const data = await gql(`
+      query {
+        posts {
+          id
+          title
+          content
+        }
+      }
+    `);
+    cache.posts = data;
+    return data.posts;
+  } catch (err) {
+    console.error('Error fetching posts:', err);
+  }
+}
+
+// Load users and posts
+async function load() {
+  usersDiv.innerHTML = '<p class="loading">Loading users...</p>';
+  try {
+    const users = await loadUsersFromCache();
+    const posts = await loadPostsFromCache();
+    renderUsers(users);
+  } catch (err) {
+    usersDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+  }
+}
+
+load();
