@@ -1,0 +1,119 @@
+diff --git a/frontend/script.js b/frontend/script.js
+index 93c440f..90877e4 100644
+--- a/frontend/script.js
++++ b/frontend/script.js
+@@ -1,15 +1,17 @@
+-
+ async function gql(query, variables = {}) {
+   const res = await fetch('http://localhost:4000/graphql', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ query, variables })
+-  })
+-  const json = await res.json()
+-  if (json.errors) throw new Error(json.errors[0].message)
+-  return json.data
++  });
++  const json = await res.json();
++  if (json.errors) throw new Error(json.errors[0].message);
++  return json.data;
+ }
+ 
++// Caching with LocalStorage
++const cache = new Map();
++
+ // DOM Elements
+ const userForm = document.getElementById('userForm')
+ const usersDiv = document.getElementById('users')
+@@ -32,18 +34,18 @@ async function loadUsers() {
+           }
+         }
+       }
+-    `)
+-    renderUsers(data.users)
++    `);
++    renderUsers(data.users);
+   } catch (err) {
+-    usersDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`
++    usersDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+   }
+ }
+ 
+ // Render users
+ function renderUsers(users) {
+   if (users.length === 0) {
+-    usersDiv.innerHTML = '<p>No users yet.</p>'
+-    return
++    usersDiv.innerHTML = '<p>No users yet.</p>';
++    return;
+   }
+ 
+   usersDiv.innerHTML = users.map(user => `
+@@ -61,7 +63,7 @@ function renderUsers(users) {
+         `).join('') : '<em>No posts</em>'}
+       </div>
+     </div>
+-  `).join('')
++  `).join('');
+ }
+ 
+ // Escape HTML
+@@ -73,23 +75,29 @@ function escape(str) {
+ 
+ // Delete post
+ window.deletePost = async (postId) => {
+-  if (!confirm('Delete this post?')) return
++  if (!confirm('Delete this post?')) return;
+   try {
+-    await gql(`mutation { deletePost(id: "${postId}") }`)
+-    loadUsers()
++    await gql(`mutation { deletePost(id: "${postId}" ) }`);
++    loadUsers();
+   } catch (err) {
+-    alert('Delete failed: ' + err.message)
++    alert('Delete failed: ' + err.message);
+   }
+ }
+ 
+ // Add user
+ userForm.addEventListener('submit', async (e) => {
+-  e.preventDefault()
+-  const name = document.getElementById('name').value
+-  const email = document.getElementById('email').value
+-  const age = document.getElementById('age').value
++  e.preventDefault();
++  const name = document.getElementById('name').value;
++  const email = document.getElementById('email').value;
++  const age = document.getElementById('age').value;
+ 
+   try {
++    const cachedQuery = cache.get(`createUser-${name}-${email}-${age}`);
++    if (cachedQuery) {
++      console.log('Using cached result');
++      return;
++    }
++
+     await gql(`
+       mutation($n:String!,$e:String!,$a:Int){
+         createUser(name:$n,email:$e,age:$a){id}
+@@ -98,13 +106,14 @@ userForm.addEventListener('submit', async (e) => {
+       n: name,
+       e: email,
+       a: age ? parseInt(age) : null
+-    })
+-    userForm.reset()
+-    loadUsers()
++    });
++    cache.set(`createUser-${name}-${email}-${age}`, true);
++    userForm.reset();
++    loadUsers();
+   } catch (err) {
+-    alert('Error: ' + err.message)
++    alert('Error: ' + err.message);
+   }
+ })
+ 
+ // Initial load
+-loadUsers()
+\ No newline at end of file
++loadUsers();
