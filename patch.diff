@@ -1,0 +1,147 @@
+diff --git a/frontend/script.js b/frontend/script.js
+index 93c440f..13fd734 100644
+--- a/frontend/script.js
++++ b/frontend/script.js
+@@ -1,23 +1,39 @@
+-
+ async function gql(query, variables = {}) {
+   const res = await fetch('http://localhost:4000/graphql', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ query, variables })
+-  })
+-  const json = await res.json()
+-  if (json.errors) throw new Error(json.errors[0].message)
+-  return json.data
++  });
++  const json = await res.json();
++  if (json.errors) throw new Error(json.errors[0].message);
++  return json.data;
+ }
+ 
++// Caching
++const cache = {
++  get: (key) => {
++    const stored = localStorage.getItem(key);
++    if (stored) return JSON.parse(stored);
++    return null;
++  },
++  set: (key, value) => {
++    localStorage.setItem(key, JSON.stringify(value));
++  }
++};
++
+ // DOM Elements
+-const userForm = document.getElementById('userForm')
+-const usersDiv = document.getElementById('users')
++const userForm = document.getElementById('userForm');
++const usersDiv = document.getElementById('users');
+ 
+ // Load users
+ async function loadUsers() {
+-  usersDiv.innerHTML = '<p class="loading">Loading users...</p>'
++  usersDiv.innerHTML = '<p class="loading">Loading users...</p>';
+   try {
++    const cachedData = cache.get('users');
++    if (cachedData) {
++      renderUsers(cachedData);
++      return;
++    }
+     const data = await gql(`
+       query {
+         users {
+@@ -32,26 +48,25 @@ async function loadUsers() {
+           }
+         }
+       }
+-    `)
+-    renderUsers(data.users)
++    `);
++    cache.set('users', data);
++    renderUsers(data.users);
+   } catch (err) {
+-    usersDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`
++    usersDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+   }
+ }
+ 
+ // Render users
+ function renderUsers(users) {
+   if (users.length === 0) {
+-    usersDiv.innerHTML = '<p>No users yet.</p>'
+-    return
++    usersDiv.innerHTML = '<p>No users yet.</p>';
++    return;
+   }
+ 
+   usersDiv.innerHTML = users.map(user => `
+     <div class="user-card">
+       <h3>${escape(user.name)} <small>(${escape(user.email)})</small></h3>
+-      ${user.age ? `<p><strong>Age:</strong> ${user.age}</p>` : ''}
+-      
+-      <div class="posts">
++      ${user.age ? `<p><strong>Age:</strong> ${user.age}</p>` : ''}\\n\\n      <div class="posts">
+         <h4>Posts:</h4>
+         ${user.posts.length ? user.posts.map(post => `
+           <div class="post">
+@@ -66,28 +81,28 @@ function renderUsers(users) {
+ 
+ // Escape HTML
+ function escape(str) {
+-  const div = document.createElement('div')
+-  div.textContent = str
+-  return div.innerHTML
++  const div = document.createElement('div');
++  div.textContent = str;
++  return div.innerHTML;
+ }
+ 
+ // Delete post
+ window.deletePost = async (postId) => {
+-  if (!confirm('Delete this post?')) return
++  if (!confirm('Delete this post?')) return;
+   try {
+-    await gql(`mutation { deletePost(id: "${postId}") }`)
+-    loadUsers()
++    await gql(`mutation { deletePost(id: "${postId}" ) }`);
++    loadUsers();
+   } catch (err) {
+-    alert('Delete failed: ' + err.message)
++    alert('Delete failed: ' + err.message);
+   }
+ }
+ 
+ // Add user
+ userForm.addEventListener('submit', async (e) => {
+-  e.preventDefault()
+-  const name = document.getElementById('name').value
+-  const email = document.getElementById('email').value
+-  const age = document.getElementById('age').value
++  e.preventDefault();
++  const name = document.getElementById('name').value;
++  const email = document.getElementById('email').value;
++  const age = document.getElementById('age').value;
+ 
+   try {
+     await gql(`
+@@ -98,13 +113,13 @@ userForm.addEventListener('submit', async (e) => {
+       n: name,
+       e: email,
+       a: age ? parseInt(age) : null
+-    })
+-    userForm.reset()
+-    loadUsers()
++    });
++    userForm.reset();
++    loadUsers();
+   } catch (err) {
+-    alert('Error: ' + err.message)
++    alert('Error: ' + err.message);
+   }
+-})
++}
+ 
+ // Initial load
+-loadUsers()
+\ No newline at end of file
++loadUsers();
